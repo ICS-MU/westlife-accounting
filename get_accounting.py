@@ -2,6 +2,7 @@
 
 import jwt
 import os
+import sys
 import requests
 import json
 import logging
@@ -15,48 +16,19 @@ from configuration import Configuration
 from db import Database
 from ur import UsageRecord, parse_usage_record
 
-def lookup_public_key(name=None):
-    kouril = '''\
------BEGIN CERTIFICATE-----
-MIIFrDCCBJSgAwIBAgIQBLJvHj45id6hybVQjV01qjANBgkqhkiG9w0BAQsFADBy
-MQswCQYDVQQGEwJOTDEWMBQGA1UECBMNTm9vcmQtSG9sbGFuZDESMBAGA1UEBxMJ
-QW1zdGVyZGFtMQ8wDQYDVQQKEwZURVJFTkExJjAkBgNVBAMTHVRFUkVOQSBlU2Np
-ZW5jZSBQZXJzb25hbCBDQSAzMB4XDTE3MTExNTAwMDAwMFoXDTE4MTIxNDEyMDAw
-MFowgYkxEzARBgoJkiaJk/IsZAEZFgNvcmcxFjAUBgoJkiaJk/IsZAEZFgZ0ZXJl
-bmExEzARBgoJkiaJk/IsZAEZFgN0Y3MxCzAJBgNVBAYTAkNaMRswGQYDVQQKExJN
-YXNhcnlrIFVuaXZlcnNpdHkxGzAZBgNVBAMTEkRhbmllbCBLb3VyaWwgMTM4ODCC
-ASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALcKXkFNRj9xL5c6ExhphTiw
-wO6Lc6xWaY8alqKxrLa/ZNJtWrQkeWnnF2LrUwqWGSbLg3GGcmvTbEgF9GNTnO2s
-T+e1rCLsGUmOgmNUKWE/VKm7iEup7fcIiZButbcETmHL39OrE4IULIoeSk3NUSTc
-NFEpYQgYHYfmfPtJUhyKFGCwcsZZEUEa+Q2fKyBJWiTcugJSFAMF1j8WIo9cBFOH
-rVbVtQJazwP7HrDhFwU5LnR/oSG+1BpWuuz0LPbRLQqXKEzRj6zbcxgZPn6GcJSL
-kMBjdJUusVNrPLFPM5UQj0IGs6DNX5t/+GiRWZ+h3zxKuilKFtB3kM4eK6GyhWsC
-AwEAAaOCAiQwggIgMB8GA1UdIwQYMBaAFIyfES7m43oEpR5Vi0YIBKbtl3CmMB0G
-A1UdDgQWBBThrKU+8tahO0Bz1jBTMmIYWg9A4jAMBgNVHRMBAf8EAjAAMGYGA1Ud
-EQRfMF2BDDEzODhAbXVuaS5jeoERMTM4OEBtYWlsLm11bmkuY3qBE2tvdXJpbEBt
-YWlsLm11bmkuY3qBEmtvdXJpbEBpY3MubXVuaS5jeoERa291cmlsQGZpLm11bmku
-Y3owDgYDVR0PAQH/BAQDAgSwMB0GA1UdJQQWMBQGCCsGAQUFBwMCBggrBgEFBQcD
-BDA0BgNVHSAELTArMAwGCiqGSIb3TAUCAgEwDAYKYIZIAYb9bAQfATANBgsqhkiG
-90wFAgMDAzCBhQYDVR0fBH4wfDA8oDqgOIY2aHR0cDovL2NybDMuZGlnaWNlcnQu
-Y29tL1RFUkVOQWVTY2llbmNlUGVyc29uYWxDQTMuY3JsMDygOqA4hjZodHRwOi8v
-Y3JsNC5kaWdpY2VydC5jb20vVEVSRU5BZVNjaWVuY2VQZXJzb25hbENBMy5jcmww
-ewYIKwYBBQUHAQEEbzBtMCQGCCsGAQUFBzABhhhodHRwOi8vb2NzcC5kaWdpY2Vy
-dC5jb20wRQYIKwYBBQUHMAKGOWh0dHA6Ly9jYWNlcnRzLmRpZ2ljZXJ0LmNvbS9U
-RVJFTkFlU2NpZW5jZVBlcnNvbmFsQ0EzLmNydDANBgkqhkiG9w0BAQsFAAOCAQEA
-INj1Gq1+cW/t3Oh/6sQlOUsKXOizpfB4Nxx//j+eaKoRCrbsMZnaTm1yzdH1Rr1K
-nFE2Paa6j08/nmJ67ctwCgU1qJ7JPIvUJ3Ohj7N/HbOrJpjtzrYQuH7mw80fkUgf
-yFYDIWupPQNuLFXFT38ThGAwGcDeyGuKs8RbNqfpcj04hClSGY2xBjGf4VE1lGO+
-eEoNbGh6CF/h9I2YIkyj6/6P7zgDaN+fQDMnLP6Ku+ZkU+xqyrWeV5ElmlYz61Mk
-LLAm2JZXaPMVaLp27z94CBkot4+8b1xRIaXfvCm0Z6buzk7zvAy10cQmlyh8g2X4
-HZ8IRSmV16XBspkcZmyP+Q==
------END CERTIFICATE-----
-'''
-    cert_obj = load_pem_x509_certificate(kouril.encode('ascii'), default_backend())
+def lookup_service_url(name):
+    endpoints = json.load(open(config.get('services')))
+    return endpoints[name]["endpoint"]
+
+def lookup_service_pubkey(name):
+    endpoints = json.load(open(config.get('services')))
+    cert = endpoints[name]["cert"]
+    cert_obj = load_pem_x509_certificate(cert.encode('ascii'), default_backend())
     return(cert_obj.public_key())
 
 
-def extract_usage_records(token):
-    signer = lookup_public_key()
+def extract_usage_records(token, service):
+    signer = lookup_service_pubkey(service)
     msg = jwt.decode(token, signer, algorithms='RS256')
 
     if msg["status"] != "success":
@@ -71,7 +43,7 @@ def extract_usage_records(token):
     return usage_records
 
 
-def get_usage_records(url):
+def get_usage_records(service):
     cert = config.get("cert")
     key = config.get("key")
     if cert is None or key is None:
@@ -79,6 +51,8 @@ def get_usage_records(url):
         raise Exception("Both cert and key must be specified")
 
     verify = config.get("cadir") if config.get("cadir") is not None else True
+
+    url = lookup_service_url(service)
         
     requests_logger = logging.getLogger("urllib3")
     requests_logger.setLevel(logging.ERROR)
@@ -89,12 +63,13 @@ def get_usage_records(url):
             (url, response.status_code, response.reason))
         raise Exception("Failed to get HTTP response")
 
-    return (extract_usage_records(response.text.rstrip(os.linesep)))
+    token = response.text.rstrip(os.linesep)
+    return (extract_usage_records(token, service))
 
 def parse_args():
     parser = argparse.ArgumentParser(
             description="Obtain a set of usage records from a service")
-    parser.add_argument('url', help="Endpoint to get usage records from")
+    parser.add_argument('service', help="The service to get usage records from")
 
     return parser.parse_args()
 
@@ -107,7 +82,7 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
 
-    usage_records = get_usage_records(args.url)
+    usage_records = get_usage_records(args.service)
     db = Database()
     for ur in usage_records:
         db.store_ur(ur)
