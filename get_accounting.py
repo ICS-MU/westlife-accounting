@@ -66,6 +66,11 @@ def get_usage_records(service):
     token = response.text.rstrip(os.linesep)
     return (extract_usage_records(token, service))
 
+def store_usage_records(usage_records):
+    db = Database()
+    for ur in usage_records:
+        db.store_ur(ur)
+
 def parse_args():
     parser = argparse.ArgumentParser(
             description="Obtain a set of usage records from a service")
@@ -83,6 +88,4 @@ if __name__ == '__main__':
     logger = logging.getLogger(__name__)
 
     usage_records = get_usage_records(args.service)
-    db = Database()
-    for ur in usage_records:
-        db.store_ur(ur)
+    store_usage_records(usage_records)
